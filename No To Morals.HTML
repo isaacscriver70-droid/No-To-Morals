@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Heist</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+        user-select: none;
+    }
+
+    body {
+        margin: 0;
+        background: #090d14;
+        color: white;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+    }
+
+    #game {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        background:
+            linear-gradient(rgba(10,15,25,.85), rgba(10,15,25,.85)),
+            repeating-linear-gradient(
+                45deg,
+                #18212d 0px,
+                #18212d 40px,
+                #202b38 40px,
+                #202b38 80px
+            );
+    }
+
+    #hud {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        right: 15px;
+        z-index: 20;
+        display: flex;
+        justify-content: space-between;
+        background: rgba(0,0,0,.7);
+        padding: 12px 18px;
+        border: 2px solid #39485c;
+        border-radius: 10px;
+    }
+
+    .stat {
+        font-weight: bold;
+    }
+
+    #message {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,.8);
+        padding: 10px 20px;
+        border-radius: 8px;
+        z-index: 30;
+        color: #ffd54a;
+    }
+
+    .room {
+        position: absolute;
+        border: 4px solid #46566b;
+        background: #273443;
+    }
+
+    #lobby {
+        left: 5%;
+        top: 18%;
+        width: 55%;
+        height: 65%;
+    }
+
+    #vaultRoom {
+        right: 5%;
+        top: 25%;
+        width: 28%;
+        height: 50%;
+        background: #1b222c;
+    }
+
+    .desk {
+        position: absolute;
+        width: 130px;
+        height: 60px;
+        background: #714d32;
+        border: 4px solid #4a301f;
+    }
+
+    #desk1 {
+        left: 25%;
+        top: 30%;
+    }
+
+    #desk2 {
+        left: 25%;
+        top: 58%;
+    }
+
+    .wall {
+        position: absolute;
+        background: #111923;
+    }
+
+    #wall1 {
+        left: 60%;
+        top: 18%;
+        width: 5%;
+        height: 65%;
+    }
+
+    #player {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        background: #4da6ff;
+        border: 3px solid white;
+        border-radius: 50%;
+        z-index: 10;
+        box-shadow: 0 0 15px #4da6ff;
+    }
+
+    .guard {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        background: #e84a4a;
+        border: 3px solid #ffb0b0;
+        border-radius: 50%;
+        z-index: 9;
+        box-shadow: 0 0 12px rgba(255,50,50,.5);
+    }
+
+    .guard::after {
+        content: "!";
+        position: absolute;
+        top: -22px;
+        left: 10px;
+        color: #ff5555;
+        font-weight: bold;
+    }
+
+    #vault {
+        position: absolute;
+        width: 110px;
+        height: 110px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: #596879;
+        border: 10px solid #303a47;
+        box-shadow: inset 0 0 0 5px #8796a8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 35px;
+    }
+
+    #exit {
+        position: absolute;
+        left: 8%;
+        bottom: 5%;
+        width: 100px;
+        height: 60px;
+        background: #19a974;
+        border: 4px solid #0b6747;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+    }
+
+    #cash {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 40px;
+        display: none;
+        z-index: 5;
+    }
+
+    #overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,.9);
+        display: none;
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    #overlay h1 {
+        font-size: 55px;
+        color: #ffd54a;
+        margin-bottom: 10px;
+    }
+
+    button {
+        padding: 14px 28px;
+        background: #ffd54a;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #fff078;
+    }
+
+    #progress {
+        position: absolute;
+        left: 50%;
+        bottom: 20px;
+        transform: translateX(-50%);
+        width: 300px;
+        height: 20px;
+        background: #222;
+        border: 2px solid #777;
+        display: none;
+    }
+
+    #progressBar {
+        height: 100%;
+        width: 0%;
+        background: #ffd54a;
+    }
+
+    .controls {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        color: #aaa;
+        font-size: 13px;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+    <div id="hud">
+        <div class="stat">💰 Cash: $<span id="money">0</span></div>
+        <div class="stat">🚨 Alarm: <span id="alarm">0</span>%</div>
+        <div class="stat">❤️ Health: <span id="health">100</span></div>
+    </div>
+
+    <div id="message">Reach the vault and grab the cash!</div>
+
+    <div id="lobby" class="room">
+        <div id="desk1" class="desk"></div>
+        <div id="desk2" class="desk"></div>
+    </div>
+
+    <div id="wall1" class="wall"></div>
+
+    <div id="vaultRoom" class="room">
+        <div id="vault">🔒</div>
+        <div id="cash">💵</div>
+    </div>
+
+    <div id="exit">🚪 EXIT</div>
+
+    <div id="player"></div>
+
+    <div class="guard" id="guard1"></div>
+    <div class="guard" id="guard2"></div>
+    <div class="guard" id="guard3"></div>
+
+    <div id="progress">
+        <div id="progressBar"></div>
+    </div>
+
+    <div class="controls">
+        WASD / Arrow Keys = Move
+    </div>
+
+    <div id="overlay">
+        <h1 id="resultTitle">YOU ESCAPED!</h1>
+        <p id="resultText"></p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+</div>
+
+<script>
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+
+const moneyText = document.getElementById("money");
+const alarmText = document.getElementById("alarm");
+const healthText = document.getElementById("health");
+
+const vault = document.getElementById("vault");
+const cash = document.getElementById("cash");
+const exit = document.getElementById("exit");
+
+const progress = document.getElementById("progress");
+const progressBar = document.getElementById("progressBar");
+
+const message = document.getElementById("message");
+const overlay = document.getElementById("overlay");
+const resultTitle = document.getElementById("resultTitle");
+const resultText = document.getElementById("resultText");
+
+let x = 120;
+let y = 300;
+
+let money = 0;
+let health = 100;
+let alarm = 0;
+
+let vaultOpen = false;
+let hasMoney = false;
+let gameOver = false;
+
+const keys = {};
+
+const guards = [
+    {
+        el: document.getElementById("guard1"),
+        x: 300,
+        y: 250,
+        dx: 2,
+        dy: 0
+    },
+    {
+        el: document.getElementById("guard2"),
+        x: 500,
+        y: 500,
+        dx: 0,
+        dy: 2
+    },
+    {
+        el: document.getElementById("guard3"),
+        x: 750,
+        y: 350,
+        dx: -2,
+        dy: 0
+    }
+];
+
+function setPosition(element, x, y) {
+    element.style.left = x + "px";
+    element.style.top = y + "px";
+}
+
+function distance(aX, aY, bX, bY) {
+    return Math.sqrt(
+        Math.pow(aX - bX, 2) +
+        Math.pow(aY - bY, 2)
+    );
+}
+
+function updatePlayer() {
+
+    if (gameOver) return;
+
+    let speed = 4;
+
+    if (keys["w"] || keys["ArrowUp"]) y -= speed;
+    if (keys["s"] || keys["ArrowDown"]) y += speed;
+    if (keys["a"] || keys["ArrowLeft"]) x -= speed;
+    if (keys["d"] || keys["ArrowRight"]) x += speed;
+
+    const maxX = window.innerWidth - 40;
+    const maxY = window.innerHeight - 40;
+
+    x = Math.max(0, Math.min(maxX, x));
+    y = Math.max(70, Math.min(maxY, y));
+
+    setPosition(player, x, y);
+
+    checkVault();
+    checkExit();
+    checkGuards();
+}
+
+function checkVault() {
+
+    const vaultX = window.innerWidth * .05 +
+                   window.innerWidth * .55 +
+                   window.innerWidth * .28 / 2;
+
+    const vaultY = window.innerHeight * .25 +
+                   window.innerHeight * .50 / 2;
+
+    const d = distance(x, y, vaultX, vaultY);
+
+    if (d < 100 && !vaultOpen) {
+
+        message.textContent = "Hold SPACE to crack the vault...";
+        progress.style.display = "block";
+
+        if (keys[" "]) {
+            crackVault();
+        } else {
+            progressBar.style.width = "0%";
+        }
+
+    } else if (!vaultOpen) {
+        progress.style.display = "none";
+        message.textContent = "Reach the vault and grab the cash!";
+    }
+}
+
+let crackProgress = 0;
+
+function crackVault() {
+
+    crackProgress += 1;
+
+    progressBar.style.width =
+        Math.min(crackProgress, 100) + "%";
+
+    alarm += 0.15;
+
+    alarmText.textContent =
+        Math.min(Math.floor(alarm), 100);
+
+    if (crackProgress >= 100) {
+
+        vaultOpen = true;
+
+        vault.textContent = "🔓";
+        cash.style.display = "block";
+
+        progress.style.display = "none";
+
+        message.textContent =
+            "Vault opened! Collect the cash.";
+
+        alarm += 10;
+    }
+}
+
+function collectCash() {
+
+    if (!vaultOpen || hasMoney) return;
+
+    const vaultX = window.innerWidth * .05 +
+                   window.innerWidth * .55 +
+                   window.innerWidth * .28 / 2;
+
+    const vaultY = window.innerHeight * .25 +
+                   window.innerHeight * .50 / 2;
+
+    if (distance(x, y, vaultX, vaultY) < 70) {
+
+        hasMoney = true;
+        money = 50000;
+
+        cash.style.display = "none";
+
+        moneyText.textContent =
+            money.toLocaleString();
+
+        message.textContent =
+            "💰 You got the cash! Escape through the green door!";
+
+        alarm += 20;
+    }
+}
+
+function checkExit() {
+
+    if (!hasMoney) return;
+
+    const exitX = window.innerWidth * .08 + 50;
+    const exitY = window.innerHeight * .95 - 30;
+
+    if (distance(x, y, exitX, exitY) < 90) {
+        win();
+    }
+}
+
+function checkGuards() {
+
+    guards.forEach(g => {
+
+        const d = distance(x, y, g.x, g.y);
+
+        if (d < 45) {
+
+            health -= 0.25;
+            alarm += 0.15;
+
+            healthText.textContent =
+                Math.max(0, Math.floor(health));
+
+            if (health <= 0) {
+                lose("The guards caught you!");
+            }
+        }
+
+        if (d < 150) {
+            alarm += 0.04;
+        }
+    });
+
+    alarm = Math.min(alarm, 100);
+
+    alarmText.textContent =
+        Math.floor(alarm);
+
+    if (alarm >= 100) {
+        lose("🚨 The alarm reached 100%!");
+    }
+}
+
+function updateGuards() {
+
+    if (gameOver) return;
+
+    guards.forEach(g => {
+
+        g.x += g.dx;
+        g.y += g.dy;
+
+        if (g.x < 100 || g.x > window.innerWidth - 100) {
+            g.dx *= -1;
+        }
+
+        if (g.y < 100 || g.y > window.innerHeight - 100) {
+            g.dy *= -1;
+        }
+
+        setPosition(g.el, g.x, g.y);
+    });
+}
+
+function win() {
+
+    gameOver = true;
+
+    overlay.style.display = "flex";
+
+    resultTitle.textContent = "💰 YOU ESCAPED!";
+    resultText.textContent =
+        "You escaped with $" +
+        money.toLocaleString() +
+        "!";
+}
+
+function lose(reason) {
+
+    gameOver = true;
+
+    overlay.style.display = "flex";
+
+    resultTitle.textContent = "🚨 BUSTED!";
+    resultText.textContent = reason;
+}
+
+document.addEventListener("keydown", e => {
+
+    keys[e.key] = true;
+
+    if (
+        ["ArrowUp", "ArrowDown",
+         "ArrowLeft", "ArrowRight", " "]
+        .includes(e.key)
+    ) {
+        e.preventDefault();
+    }
+
+    if (e.key === "e") {
+        collectCash();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key] = false;
+});
+
+function gameLoop() {
+
+    updatePlayer();
+    updateGuards();
+    collectCash();
+
+    requestAnimationFrame(gameLoop);
+}
+
+setPosition(player, x, y);
+
+guards.forEach(g => {
+    setPosition(g.el, g.x, g.y);
+});
+
+gameLoop();
+</script>
+
+</body>
+</html>
